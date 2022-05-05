@@ -16,16 +16,17 @@ enum WebsocketAPI {
     Default,
     MultiStream,
     Custom(String),
+    DefaultTestnet,
+    MultiStreamTestnet
 }
 
 impl WebsocketAPI {
     fn params(self, subscription: &str) -> String {
         match self {
             WebsocketAPI::Default => format!("wss://stream.binance.com:9443/ws/{}", subscription),
-            WebsocketAPI::MultiStream => format!(
-                "wss://stream.binance.com:9443/stream?streams={}",
-                subscription
-            ),
+            WebsocketAPI::MultiStream => format!("wss://stream.binance.com:9443/stream?streams={}",subscription),
+            WebsocketAPI::DefaultTestnet => format!("wss://testnet.binance.vision/ws/{}", subscription),
+            WebsocketAPI::MultiStreamTestnet => format!("wss://testnet.binance.vision/stream?streams={}",subscription),
             WebsocketAPI::Custom(url) => format!("{}/{}", url, subscription),
         }
     }
@@ -79,16 +80,24 @@ impl<'a> WebSockets<'a> {
         }
     }
 
-    pub fn connect(&mut self, subscription: &str) -> Result<()> {
-        self.connect_wss(WebsocketAPI::Default.params(subscription))
+    pub fn connect(&mut self, subscription: &str, testnet: bool) -> Result<()> {
+        if testnet {
+            self.connect_wss(WebsocketAPI::DefaultTestnet.params(subscription))
+        } else {
+            self.connect_wss(WebsocketAPI::Default.params(subscription))
+        }
     }
 
     pub fn connect_with_config(&mut self, subscription: &str, config: &Config) -> Result<()> {
         self.connect_wss(WebsocketAPI::Custom(config.ws_endpoint.clone()).params(subscription))
     }
 
-    pub fn connect_multiple_streams(&mut self, endpoints: &[String]) -> Result<()> {
-        self.connect_wss(WebsocketAPI::MultiStream.params(&endpoints.join("/")))
+    pub fn connect_multiple_streams(&mut self, endpoints: &[String], testnet: bool) -> Result<()> {
+        if testnet {
+            self.connect_wss(WebsocketAPI::MultiStreamTestnet.params(&endpoints.join("/")))
+        } else {
+            self.connect_wss(WebsocketAPI::MultiStream.params(&endpoints.join("/")))
+        }
     }
 
     fn connect_wss(&mut self, wss: String) -> Result<()> {
